@@ -13,8 +13,8 @@ import {
   X,
 } from "lucide-react";
 import {
-  Bar,
-  BarChart,
+  Area,
+  AreaChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -26,6 +26,7 @@ import { useAdminAuth } from "@/lib/AdminAuthContext";
 import LoginForm from "@/components/LoginForm";
 import KpiCard from "@/components/KpiCard";
 import Sidebar from "@/components/Sidebar";
+import Reveal from "@/components/Reveal";
 import { CategoryIcon, priorityClass } from "@/lib/display";
 
 const STATUSES = ["new", "acknowledged", "in_progress", "resolved", "closed"];
@@ -109,43 +110,61 @@ function Dashboard() {
   return (
     <>
       <div className="kpi-grid">
-        <KpiCard icon={ClipboardList} iconBg="#eef0ff" iconFg="#6366f1" label="Total reports" value={overview?.total_reports ?? "-"} />
-        <KpiCard icon={CircleDot} iconBg="#fff1e0" iconFg="#f59e0b" label="Open" value={overview?.open_reports ?? "-"} />
-        <KpiCard icon={CheckCircle2} iconBg="#e3faf0" iconFg="#10b981" label="Resolved" value={overview?.resolved_reports ?? "-"} />
-        <KpiCard
-          icon={Clock}
-          iconBg="#e3f6fc"
-          iconFg="#06b6d4"
-          label="Avg. resolution"
-          value={overview?.avg_resolution_hours != null ? `${overview.avg_resolution_hours}h` : "-"}
-        />
-        <KpiCard
-          icon={Flame}
-          iconBg="#fdeaea"
-          iconFg="#ef4444"
-          label="Systemic issues"
-          value={overview?.systemic_clusters ?? "-"}
-          hint="clusters with 2+ reports"
-        />
-        <KpiCard
-          icon={AlarmClock}
-          iconBg="#f3e8ff"
-          iconFg="#8b5cf6"
-          label="Backlog"
-          value={overview?.backlog_over_week ?? "-"}
-          hint="open > 7 days"
-        />
+        <Reveal delay={0}>
+          <KpiCard icon={ClipboardList} iconBg="#eef0ff" iconFg="#6366f1" label="Total reports" value={overview?.total_reports ?? "-"} />
+        </Reveal>
+        <Reveal delay={0.05}>
+          <KpiCard icon={CircleDot} iconBg="#fff1e0" iconFg="#f59e0b" label="Open" value={overview?.open_reports ?? "-"} />
+        </Reveal>
+        <Reveal delay={0.1}>
+          <KpiCard icon={CheckCircle2} iconBg="#e3faf0" iconFg="#10b981" label="Resolved" value={overview?.resolved_reports ?? "-"} />
+        </Reveal>
+        <Reveal delay={0.15}>
+          <KpiCard
+            icon={Clock}
+            iconBg="#e3f6fc"
+            iconFg="#06b6d4"
+            label="Avg. resolution"
+            value={overview?.avg_resolution_hours ?? "-"}
+            suffix={overview?.avg_resolution_hours != null ? "h" : ""}
+          />
+        </Reveal>
+        <Reveal delay={0.2}>
+          <KpiCard
+            icon={Flame}
+            iconBg="#fdeaea"
+            iconFg="#ef4444"
+            label="Systemic issues"
+            value={overview?.systemic_clusters ?? "-"}
+            hint="clusters with 2+ reports"
+            pulse={!!overview?.systemic_clusters}
+          />
+        </Reveal>
+        <Reveal delay={0.25}>
+          <KpiCard
+            icon={AlarmClock}
+            iconBg="#f3e8ff"
+            iconFg="#8b5cf6"
+            label="Backlog"
+            value={overview?.backlog_over_week ?? "-"}
+            hint="open > 7 days"
+          />
+        </Reveal>
       </div>
 
       <section>
         <h2>Reports over time</h2>
         <div className="card" style={{ width: "100%", height: 240 }}>
           <ResponsiveContainer>
-            <BarChart data={trends}>
+            <AreaChart data={trends}>
               <defs>
-                <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#8b5cf6" />
-                  <stop offset="100%" stopColor="#6366f1" />
+                <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.45} />
+                  <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
+                </linearGradient>
+                <linearGradient id="areaLine" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#6366f1" />
+                  <stop offset="100%" stopColor="#06b6d4" />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" opacity={0.25} vertical={false} />
@@ -154,8 +173,16 @@ function Dashboard() {
               <Tooltip
                 contentStyle={{ borderRadius: 10, border: "1px solid var(--border)", fontSize: "0.85rem" }}
               />
-              <Bar dataKey="count" fill="url(#barFill)" radius={[6, 6, 0, 0]} maxBarSize={36} />
-            </BarChart>
+              <Area
+                type="monotone"
+                dataKey="count"
+                stroke="url(#areaLine)"
+                strokeWidth={2.5}
+                fill="url(#areaFill)"
+                dot={{ r: 3, strokeWidth: 2, fill: "#fff" }}
+                activeDot={{ r: 5 }}
+              />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </section>
@@ -167,10 +194,14 @@ function Dashboard() {
             No recurring clusters yet — submit a few similar reports to see grouping in action.
           </div>
         )}
-        {hotspots.map((h) => (
-          <div
+        {hotspots.map((h, i) => (
+          <Reveal
             key={h.cluster_id}
             className="card clickable"
+            delay={i * 0.06}
+            style={{ cursor: "pointer" }}
+          >
+          <div
             onClick={() => {
               setClusterFilter(h.cluster_id);
               document.getElementById("all-reports")?.scrollIntoView({ behavior: "smooth" });
@@ -191,6 +222,7 @@ function Dashboard() {
             </p>
             <p style={{ fontSize: "0.82rem" }}>📍 {h.locations.join(" · ")}</p>
           </div>
+          </Reveal>
         ))}
       </section>
 

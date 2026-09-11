@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import {
   Brain,
   CheckCheck,
@@ -18,6 +19,13 @@ import {
 } from "lucide-react";
 import { api, ApiError, type HealthStatus } from "@/lib/api";
 import { CategoryIcon } from "@/lib/display";
+import AIDemo from "@/components/AIDemo";
+import Reveal from "@/components/Reveal";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 18 },
+  visible: { opacity: 1, y: 0 },
+};
 
 const PIPELINE = [
   { icon: ClipboardList, label: "Report", sub: "Student submits" },
@@ -34,31 +42,43 @@ const FEATURES = [
     icon: Brain,
     title: "AI issue classification",
     body: "Claude reads free-text reports and extracts category, severity, and a clean summary — no rigid forms required.",
+    bg: "#eef0ff",
+    fg: "#6366f1",
   },
   {
     icon: GitMerge,
     title: "Semantic duplicate detection",
     body: "Local embeddings catch the same issue described completely differently — no shared keywords needed.",
+    bg: "#f3e8ff",
+    fg: "#a855f7",
   },
   {
     icon: Flame,
     title: "Systemic issue detection",
     body: "Repeated reports across time and location surface as one underlying problem, not 50 separate tickets.",
+    bg: "#fdeaea",
+    fg: "#ef4444",
   },
   {
     icon: TrendingUp,
     title: "Explainable priority scoring",
     body: "Severity, frequency, category risk, and persistence combine into one transparent, auditable score.",
+    bg: "#fff1e0",
+    fg: "#f59e0b",
   },
   {
     icon: Route,
     title: "Intelligent routing",
     body: "Every category maps to exactly one responsible department — routing is never a guess.",
+    bg: "#e3f6fc",
+    fg: "#06b6d4",
   },
   {
     icon: Copy,
     title: "Full transparency",
     body: "Students track resolution with just a code. Admins see hotspots, trends, and backlog in one view.",
+    bg: "#e3faf0",
+    fg: "#10b981",
   },
 ];
 
@@ -137,25 +157,37 @@ export default function HomePage() {
       </nav>
 
       <div className="landing">
-        <div className="hero-v2">
-          <span className="hero-badge">
+        <motion.div
+          className="hero-panel hero-v2"
+          initial="hidden"
+          animate="visible"
+          variants={{ visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } } }}
+        >
+          <motion.span className="hero-badge" variants={fadeUp} transition={{ duration: 0.5 }}>
             <Sparkles size={13} /> AI-powered campus problem intelligence
-          </span>
-          <h1>Scattered complaints, one clear picture.</h1>
-          <p>
+          </motion.span>
+          <motion.h1 variants={fadeUp} transition={{ duration: 0.55 }}>
+            Scattered complaints, <span className="accent">one clear picture.</span>
+          </motion.h1>
+          <motion.p variants={fadeUp} transition={{ duration: 0.55 }}>
             CampusPulse turns individual student reports into campus-wide intelligence — grouping
             duplicates, surfacing systemic issues, and routing everything to the right team
             automatically.
-          </p>
-          <div className="hero-actions">
+          </motion.p>
+          <motion.div className="hero-actions" variants={fadeUp} transition={{ duration: 0.55 }}>
             <a href="#report-form" className="btn-primary-lg">
               <ClipboardList size={17} /> Report a problem
             </a>
-            <Link href="/admin" className="btn-ghost-lg">
+            <Link href="/admin" className="btn-ghost-lg" style={{ borderColor: "rgba(255,255,255,0.2)", color: "#fff" }}>
               <LayoutDashboard size={17} /> View intelligence dashboard
             </Link>
-          </div>
-          <p style={{ marginTop: "1.5rem", fontSize: "0.8rem" }}>
+          </motion.div>
+
+          <motion.div variants={fadeUp} transition={{ duration: 0.6 }}>
+            <AIDemo />
+          </motion.div>
+
+          <motion.p className="hero-status" variants={fadeUp} style={{ marginTop: "1.5rem", fontSize: "0.8rem" }}>
             Backend:{" "}
             {health ? (
               <span className="status-ok">● {health.status}</span>
@@ -164,8 +196,8 @@ export default function HomePage() {
             ) : (
               <span style={{ color: "var(--text-faint)" }}>checking…</span>
             )}
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
 
         <span className="section-eyebrow">The loop</span>
         <h2 className="section-title">Report → Understand → Group → Prioritize → Route → Resolve → Learn</h2>
@@ -177,7 +209,7 @@ export default function HomePage() {
           {PIPELINE.map((step, i) => {
             const Icon = step.icon;
             return (
-              <div className="pipeline-step" key={step.label}>
+              <Reveal className="pipeline-step" key={step.label} delay={i * 0.08} y={22}>
                 <div className="pipeline-icon">
                   <Icon size={20} strokeWidth={2.25} />
                 </div>
@@ -188,7 +220,7 @@ export default function HomePage() {
                     <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 )}
-              </div>
+              </Reveal>
             );
           })}
         </div>
@@ -200,16 +232,21 @@ export default function HomePage() {
           one problem behind them.
         </p>
         <div className="feature-grid">
-          {FEATURES.map((f) => {
+          {FEATURES.map((f, i) => {
             const Icon = f.icon;
             return (
-              <div className="feature-card" key={f.title}>
-                <div className="feature-icon">
+              <Reveal
+                className="feature-card"
+                key={f.title}
+                delay={(i % 3) * 0.08}
+                style={{ borderTop: `3px solid ${f.fg}` }}
+              >
+                <div className="feature-icon" style={{ ["--icon-bg" as string]: f.bg, ["--icon-fg" as string]: f.fg }}>
                   <Icon size={20} strokeWidth={2.25} />
                 </div>
                 <h3>{f.title}</h3>
                 <p>{f.body}</p>
-              </div>
+              </Reveal>
             );
           })}
         </div>

@@ -77,6 +77,7 @@ body {
   background:
     radial-gradient(1200px 600px at 90% -10%, rgba(99, 102, 241, 0.10), transparent 60%),
     radial-gradient(900px 500px at -10% 10%, rgba(6, 182, 212, 0.08), transparent 55%),
+    radial-gradient(circle, rgba(99, 102, 241, 0.08) 1px, transparent 1px) 0 0 / 26px 26px,
     var(--bg);
   color: var(--text);
   font-family: var(--font-body), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -1092,4 +1093,271 @@ section {
   text-align: center;
   max-width: 480px;
   margin: 0 auto 1.5rem;
+}
+
+/* =========================================================
+   Dark hero panel (always dark, regardless of theme -- a
+   marketing "spotlight" section, distinct from the app itself)
+   ========================================================= */
+.hero-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  padding: 4rem 2rem 4.5rem;
+  text-align: center;
+  background: #08091a;
+  isolation: isolate;
+}
+
+.hero-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(600px 400px at 15% 15%, rgba(139, 92, 246, 0.45), transparent 60%),
+    radial-gradient(500px 380px at 85% 20%, rgba(6, 182, 212, 0.35), transparent 60%),
+    radial-gradient(700px 500px at 50% 100%, rgba(99, 102, 241, 0.35), transparent 65%);
+  filter: blur(10px);
+}
+
+.hero-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 40%, transparent 80%);
+}
+
+.hero-panel .hero-badge {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #d8d9ff;
+}
+
+.hero-panel h1 {
+  font-size: clamp(2.3rem, 5.5vw, 3.4rem);
+  color: #fff;
+  margin-top: 1rem;
+  -webkit-text-fill-color: initial;
+  background: none;
+}
+
+.hero-panel h1 .accent {
+  background: linear-gradient(120deg, #a5b4fc, #f0abfc 50%, #67e8f9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero-panel p {
+  max-width: 560px;
+  margin: 0.9rem auto 0;
+  font-size: 1.08rem;
+  color: #b6b9de;
+}
+
+.hero-panel .status-ok,
+.hero-panel .status-bad {
+  filter: brightness(1.3);
+}
+
+.hero-panel p.hero-status { color: #9a9dc7; }
+
+/* "AI in action" live demo card */
+.ai-demo {
+  max-width: 560px;
+  margin: 2.5rem auto 0;
+  border-radius: 18px;
+  background: rgba(18, 20, 38, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  padding: 1.4rem 1.5rem;
+  text-align: left;
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
+}
+
+.ai-demo-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8f92c7;
+  margin-bottom: 0.6rem;
+}
+
+.ai-demo-dots {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.9rem;
+}
+
+.ai-demo-dots span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ai-demo-input {
+  color: #e4e5ff;
+  font-size: 0.95rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.14);
+  margin-bottom: 0.9rem;
+}
+
+.ai-demo-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ai-demo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.32rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e4e5ff;
+}
+
+.ai-demo-chip.hot { background: rgba(239, 68, 68, 0.18); border-color: rgba(239, 68, 68, 0.35); color: #fca5a5; }
+.ai-demo-chip.cool { background: rgba(6, 182, 212, 0.18); border-color: rgba(6, 182, 212, 0.35); color: #67e8f9; }
+.ai-demo-chip.warm { background: rgba(245, 158, 11, 0.18); border-color: rgba(245, 158, 11, 0.35); color: #fcd34d; }
+
+.ai-demo-foot {
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.82rem;
+  color: #9a9dc7;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* Hover life on cards */
+.feature-card,
+.pipeline-icon,
+.kpi-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: var(--brand-1);
+}
+
+.pipeline-step:hover .pipeline-icon {
+  transform: translateY(-3px) scale(1.06);
+  border-color: var(--brand-1);
+  box-shadow: 0 10px 20px -8px rgba(99, 102, 241, 0.45);
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.btn-primary-lg,
+.nav-cta {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-primary-lg:hover {
+  box-shadow: 0 16px 34px -8px rgba(99, 102, 241, 0.6);
+}
+
+@media (max-width: 640px) {
+  .hero-panel { padding: 2.75rem 1.25rem 3rem; border-radius: 20px; }
+}
+
+/* =========================================================
+   Motion: ambient background, cursor blink, shine sweep, pulse
+   ========================================================= */
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-2%, 3%) scale(1.05); }
+}
+
+.hero-panel::before {
+  animation: drift 14s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 55% { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}
+
+.ai-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: #a5b4fc;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink 0.9s step-end infinite;
+}
+
+.btn-primary-lg {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary-lg::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+}
+
+.btn-primary-lg:hover::after {
+  left: 130%;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+  50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+.priority-critical {
+  animation: pulseGlow 1.8s ease-in-out infinite;
+}
+
+@keyframes flicker {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.12) rotate(-4deg); }
+}
+
+.flame-icon {
+  display: inline-flex;
+  animation: flicker 1.4s ease-in-out infinite;
+}
+
+/* Respect users who've asked for less motion */
+@media (prefers-reduced-motion: reduce) {
+  .hero-panel::before,
+  .ai-cursor,
+  .priority-critical,
+  .flame-icon {
+    animation: none !important;
+  }
 }
