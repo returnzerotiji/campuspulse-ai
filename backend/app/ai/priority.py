@@ -6,9 +6,12 @@ new report joins it. The LLM's job (upstream) is understanding language;
 ranking is arithmetic.
 
 score = severity_base + cluster_bonus + category_weight + persistence_bonus,
-clamped to [0, 100].
+clamped to [0, 100]. `compute_priority_breakdown` returns every term so the
+admin UI can show *why* a report has the priority it does, not just the
+number -- this is the "explainable AI" half of the pitch, not a black box.
 """
 from datetime import datetime, timezone
+from typing import TypedDict
 
 SEVERITY_BASE = {"low": 20.0, "high": 70.0, "medium": 45.0, "critical": 95.0}
 
@@ -32,9 +35,17 @@ PERSISTENCE_BONUS_PER_DAY = 1.0
 PERSISTENCE_BONUS_CAP = 10.0
 
 
-def compute_priority(
+class PriorityBreakdown(TypedDict):
+    severity_base: float
+    cluster_bonus: float
+    category_weight: float
+    persistence_bonus: float
+    total: float
+
+
+def compute_priority_breakdown(
     *, severity: str, category: str, cluster_size: int, first_seen_at: datetime
-) -> float:
+) -> PriorityBreakdown:
     """cluster_size includes this report itself. first_seen_at is the
     earliest created_at among all reports in the cluster (persistence
     signal -- how long this issue has been recurring, unresolved)."""
@@ -51,5 +62,20 @@ def compute_priority(
     age_days = max((now - first_seen_at).total_seconds() / 86400.0, 0.0)
     persistence_bonus = min(age_days * PERSISTENCE_BONUS_PER_DAY, PERSISTENCE_BONUS_CAP)
 
-    score = base + cluster_bonus + category_weight + persistence_bonus
-    return round(min(max(score, 0.0), 100.0), 1)
+    total = round(min(max(base + cluster_bonus + category_weight + persistence_bonus, 0.0), 100.0), 1)
+
+    return {
+        "severity_base": base,
+        "cluster_bonus": round(cluster_bonus, 1),
+        "category_weight": category_weight,
+        "persistence_bonus": round(persistence_bonus, 1),
+        "total": total,
+    }
+
+
+def compute_priority(
+    *, severity: str, category: str, cluster_size: int, first_seen_at: datetime
+) -> float:
+    return compute_priority_breakdown(
+        severity=severity, category=category, cluster_size=cluster_size, first_seen_at=first_seen_at
+    )["total"]

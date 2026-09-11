@@ -4,6 +4,15 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlarmClock,
+  CheckCircle2,
+  Clock,
+  Flame,
+  ClipboardList,
+  CircleDot,
+  X,
+} from "lucide-react";
+import {
   Bar,
   BarChart,
   CartesianGrid,
@@ -15,13 +24,14 @@ import {
 import { api, ApiError, type Hotspot, type Report, type StatsOverview, type TrendPoint } from "@/lib/api";
 import { useAdminAuth } from "@/lib/AdminAuthContext";
 import LoginForm from "@/components/LoginForm";
-import StatTile from "@/components/StatTile";
-import { categoryIcon, priorityClass } from "@/lib/display";
+import KpiCard from "@/components/KpiCard";
+import Sidebar from "@/components/Sidebar";
+import { CategoryIcon, priorityClass } from "@/lib/display";
 
 const STATUSES = ["new", "acknowledged", "in_progress", "resolved", "closed"];
 
 export default function AdminDashboardPage() {
-  const { admin, loading, logout, isAuthenticated } = useAdminAuth();
+  const { admin, loading, isAuthenticated } = useAdminAuth();
 
   if (loading) {
     return (
@@ -43,27 +53,18 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <main className="wide-main">
-      <div className="top-bar">
-        <div className="brand">
-          <span className="brand-mark">🧠</span>
+    <div className="app-shell">
+      <Sidebar />
+      <div className="shell-main">
+        <div className="shell-topbar">
           <div>
-            <div>CampusPulse</div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-faint)", fontWeight: 500 }}>
-              Intelligence Dashboard
-            </div>
+            <h1>Intelligence Dashboard</h1>
+            <p>Everything the AI pipeline has understood, grouped, and prioritized.</p>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.9rem" }}>
-          <span style={{ fontSize: "0.85rem", color: "var(--text-soft)" }}>👋 {admin?.email}</span>
-          <button className="secondary" onClick={logout} style={{ marginTop: 0 }}>
-            Sign out
-          </button>
-        </div>
+        <Dashboard />
       </div>
-
-      <Dashboard />
-    </main>
+    </div>
   );
 }
 
@@ -107,34 +108,37 @@ function Dashboard() {
 
   return (
     <>
-      <div className="stat-grid">
-        <StatTile icon="📋" label="Total reports" value={overview?.total_reports ?? "-"} accent="#6366f1" />
-        <StatTile icon="🟠" label="Open" value={overview?.open_reports ?? "-"} accent="#f59e0b" />
-        <StatTile icon="✅" label="Resolved" value={overview?.resolved_reports ?? "-"} accent="#10b981" />
-        <StatTile
-          icon="⏱️"
+      <div className="kpi-grid">
+        <KpiCard icon={ClipboardList} iconBg="#eef0ff" iconFg="#6366f1" label="Total reports" value={overview?.total_reports ?? "-"} />
+        <KpiCard icon={CircleDot} iconBg="#fff1e0" iconFg="#f59e0b" label="Open" value={overview?.open_reports ?? "-"} />
+        <KpiCard icon={CheckCircle2} iconBg="#e3faf0" iconFg="#10b981" label="Resolved" value={overview?.resolved_reports ?? "-"} />
+        <KpiCard
+          icon={Clock}
+          iconBg="#e3f6fc"
+          iconFg="#06b6d4"
           label="Avg. resolution"
           value={overview?.avg_resolution_hours != null ? `${overview.avg_resolution_hours}h` : "-"}
-          accent="#06b6d4"
         />
-        <StatTile
-          icon="🔥"
+        <KpiCard
+          icon={Flame}
+          iconBg="#fdeaea"
+          iconFg="#ef4444"
           label="Systemic issues"
           value={overview?.systemic_clusters ?? "-"}
           hint="clusters with 2+ reports"
-          accent="#ef4444"
         />
-        <StatTile
-          icon="⏳"
+        <KpiCard
+          icon={AlarmClock}
+          iconBg="#f3e8ff"
+          iconFg="#8b5cf6"
           label="Backlog"
           value={overview?.backlog_over_week ?? "-"}
           hint="open > 7 days"
-          accent="#8b5cf6"
         />
       </div>
 
       <section>
-        <h2>📈 Reports over time</h2>
+        <h2>Reports over time</h2>
         <div className="card" style={{ width: "100%", height: 240 }}>
           <ResponsiveContainer>
             <BarChart data={trends}>
@@ -156,42 +160,43 @@ function Dashboard() {
         </div>
       </section>
 
-      <section>
-        <h2>🔥 Systemic issues</h2>
+      <section id="hotspots">
+        <h2>Systemic issues</h2>
         {hotspots.length === 0 && (
           <div className="card" style={{ opacity: 0.7 }}>
             No recurring clusters yet — submit a few similar reports to see grouping in action.
           </div>
         )}
         {hotspots.map((h) => (
-            <div
-              key={h.cluster_id}
-              className="card clickable"
-              onClick={() => {
-                setClusterFilter(h.cluster_id);
-                document.getElementById("all-reports")?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              <div className="top-bar">
-                <strong>
-                  {h.categories.map((c) => categoryIcon(c)).join(" ")} {h.representative_summary}
-                </strong>
-                <span className={`priority-pill ${priorityClass(h.max_priority)}`}>
-                  {h.max_priority}
-                </span>
-              </div>
-              <p style={{ marginTop: "0.5rem" }}>
-                <strong>{h.report_count}</strong> reports (<strong>{h.open_count}</strong> open) ·{" "}
-                {h.categories.join(", ")} · routed to {h.departments.join(", ")}
-              </p>
-              <p style={{ fontSize: "0.82rem" }}>📍 {h.locations.join(" · ")}</p>
+          <div
+            key={h.cluster_id}
+            className="card clickable"
+            onClick={() => {
+              setClusterFilter(h.cluster_id);
+              document.getElementById("all-reports")?.scrollIntoView({ behavior: "smooth" });
+            }}
+          >
+            <div className="top-bar">
+              <strong style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                {h.categories.map((c) => (
+                  <CategoryIcon key={c} category={c} size={17} />
+                ))}
+                {h.representative_summary}
+              </strong>
+              <span className={`priority-pill ${priorityClass(h.max_priority)}`}>{h.max_priority}</span>
             </div>
+            <p style={{ marginTop: "0.5rem" }}>
+              <strong>{h.report_count}</strong> reports (<strong>{h.open_count}</strong> open) ·{" "}
+              {h.categories.join(", ")} · routed to {h.departments.join(", ")}
+            </p>
+            <p style={{ fontSize: "0.82rem" }}>📍 {h.locations.join(" · ")}</p>
+          </div>
         ))}
       </section>
 
       <section id="all-reports">
         <div className="top-bar">
-          <h2>📋 All reports</h2>
+          <h2>All reports</h2>
         </div>
         <div className="filter-bar">
           <label>
@@ -218,9 +223,13 @@ function Dashboard() {
           </label>
           {clusterFilter && (
             <span className="badge badge-acknowledged">
-              Filtered to one cluster{" "}
-              <button className="link-button" onClick={() => setClusterFilter(null)} style={{ marginLeft: "0.3rem" }}>
-                clear
+              Filtered to one cluster
+              <button
+                className="link-button"
+                onClick={() => setClusterFilter(null)}
+                style={{ marginLeft: "0.3rem", display: "inline-flex", alignItems: "center" }}
+              >
+                <X size={13} />
               </button>
             </span>
           )}
@@ -241,29 +250,27 @@ function Dashboard() {
             </thead>
             <tbody>
               {reports.map((r) => (
-                  <tr key={r.id} onClick={() => router.push(`/admin/reports/${r.id}`)}>
-                    <td>
-                      <span className={`priority-pill ${priorityClass(r.priority_score)}`}>
-                        {r.priority_score}
-                      </span>
-                    </td>
-                    <td>
-                      <code>{r.tracking_code}</code>
-                    </td>
-                    <td style={{ maxWidth: 320 }}>{r.description}</td>
-                    <td>
-                      <span className="category-chip">
-                        {categoryIcon(r.category)} {r.category}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge badge-${r.severity}`}>{r.severity}</span>
-                    </td>
-                    <td>{r.department}</td>
-                    <td>
-                      <span className={`badge badge-${r.status}`}>{r.status}</span>
-                    </td>
-                  </tr>
+                <tr key={r.id} onClick={() => router.push(`/admin/reports/${r.id}`)}>
+                  <td>
+                    <span className={`priority-pill ${priorityClass(r.priority_score)}`}>{r.priority_score}</span>
+                  </td>
+                  <td>
+                    <code>{r.tracking_code}</code>
+                  </td>
+                  <td style={{ maxWidth: 320 }}>{r.description}</td>
+                  <td>
+                    <span className="category-chip">
+                      <CategoryIcon category={r.category} /> {r.category}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`badge badge-${r.severity}`}>{r.severity}</span>
+                  </td>
+                  <td>{r.department}</td>
+                  <td>
+                    <span className={`badge badge-${r.status}`}>{r.status}</span>
+                  </td>
+                </tr>
               ))}
               {reports.length === 0 && (
                 <tr>

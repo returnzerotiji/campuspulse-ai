@@ -54,8 +54,10 @@ class Report(Base):
     severity: Mapped[str] = mapped_column(String(20), nullable=False, default="medium")
     severity_source: Mapped[str] = mapped_column(String(20), nullable=False, default="student")
 
-    # Placeholder scoring/routing until Phase 3/4 wire up the AI pipeline.
     priority_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    # {severity_base, cluster_bonus, category_weight, persistence_bonus, total} --
+    # lets the UI show *why* a report has this priority, not just the number.
+    priority_breakdown: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     department: Mapped[str] = mapped_column(String(100), nullable=False, default="Unassigned")
     department_overridden: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

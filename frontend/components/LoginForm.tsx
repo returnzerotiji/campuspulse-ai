@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Brain } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { useAdminAuth } from "@/lib/AdminAuthContext";
 
@@ -29,7 +30,9 @@ export default function LoginForm() {
 
   return (
     <div className="card glass-card" style={{ maxWidth: 380, margin: "3rem auto", textAlign: "center" }}>
-      <div className="brand-mark" style={{ margin: "0 auto 0.75rem" }}>🧠</div>
+      <div className="brand-mark" style={{ margin: "0 auto 0.75rem" }}>
+        <Brain size={16} color="white" />
+      </div>
       <h2>Admin sign in</h2>
       <p style={{ marginBottom: "1rem" }}>Access the intelligence dashboard.</p>
       <form onSubmit={handleSubmit} style={{ textAlign: "left" }}>

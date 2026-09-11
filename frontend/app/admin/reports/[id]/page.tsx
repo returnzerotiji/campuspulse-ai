@@ -2,10 +2,13 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { ArrowLeft, MapPin, Sparkles, TriangleAlert } from "lucide-react";
 import { api, ApiError, type ReportDetail, type SimilarReport } from "@/lib/api";
 import { useAdminAuth } from "@/lib/AdminAuthContext";
 import LoginForm from "@/components/LoginForm";
-import { categoryIcon, priorityClass } from "@/lib/display";
+import Sidebar from "@/components/Sidebar";
+import PriorityBar from "@/components/PriorityBar";
+import { CategoryIcon, priorityClass } from "@/lib/display";
 
 const STATUSES = ["new", "acknowledged", "in_progress", "resolved", "closed"];
 const SEVERITIES = ["low", "medium", "high", "critical"];
@@ -31,9 +34,12 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <main className="wide-main">
-      <ReportDetailContent id={id} />
-    </main>
+    <div className="app-shell">
+      <Sidebar />
+      <div className="shell-main">
+        <ReportDetailContent id={id} />
+      </div>
+    </div>
   );
 }
 
@@ -88,23 +94,27 @@ function ReportDetailContent({ id }: { id: string }) {
   if (error && !report) return <p className="status-bad">{error}</p>;
   if (!report) return <div className="spinner" />;
 
-
   return (
     <>
       <p>
-        <Link href="/admin">&larr; Back to dashboard</Link>
+        <Link href="/admin" style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+          <ArrowLeft size={15} /> Back to dashboard
+        </Link>
       </p>
 
-      <div className="top-bar">
+      <div className="shell-topbar">
         <div>
-          <h1 style={{ marginBottom: "0.2rem" }}>
+          <h1>
             <code style={{ fontSize: "1.3rem" }}>{report.tracking_code}</code>
           </h1>
-          <span className="category-chip">
-            {categoryIcon(report.category)} {report.category}
+          <span className="category-chip" style={{ marginTop: "0.3rem" }}>
+            <CategoryIcon category={report.category} size={16} /> {report.category}
           </span>
         </div>
-        <span className={`priority-pill ${priorityClass(report.priority_score)}`} style={{ fontSize: "1.1rem", padding: "0.4rem 0.9rem" }}>
+        <span
+          className={`priority-pill ${priorityClass(report.priority_score)}`}
+          style={{ fontSize: "1.1rem", padding: "0.4rem 0.9rem" }}
+        >
           {report.priority_score}
         </span>
       </div>
@@ -125,12 +135,19 @@ function ReportDetailContent({ id }: { id: string }) {
                   background: "var(--info-bg)",
                   borderRadius: "var(--radius-sm)",
                   fontSize: "0.88rem",
+                  display: "flex",
+                  gap: "0.5rem",
                 }}
               >
-                🤖 <strong>AI summary:</strong> {report.ai_summary}
+                <Sparkles size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+                <span>
+                  <strong>AI summary:</strong> {report.ai_summary}
+                </span>
               </div>
             )}
-            <p style={{ marginTop: "0.75rem" }}>📍 {report.location}</p>
+            <p style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+              <MapPin size={15} /> {report.location}
+            </p>
             {report.image_url && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -144,11 +161,21 @@ function ReportDetailContent({ id }: { id: string }) {
               severity set by {report.severity_source}
             </p>
             {report.duplicate_of && (
-              <p className="status-bad" style={{ marginTop: "0.5rem" }}>
-                ⚠ Linked as a duplicate of <code>{report.duplicate_of}</code>
+              <p className="status-bad" style={{ marginTop: "0.5rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <TriangleAlert size={15} /> Linked as a duplicate of <code>{report.duplicate_of}</code>
               </p>
             )}
           </div>
+
+          {report.priority_breakdown && (
+            <div className="card">
+              <h3>Why this priority?</h3>
+              <p style={{ fontSize: "0.85rem", marginBottom: "0.75rem" }}>
+                Rule-based, not another AI guess — same weights for every report.
+              </p>
+              <PriorityBar breakdown={report.priority_breakdown} />
+            </div>
+          )}
 
           <div className="card">
             <h3>Timeline</h3>
@@ -212,8 +239,8 @@ function ReportDetailContent({ id }: { id: string }) {
             {similar.length === 0 && <p style={{ opacity: 0.7 }}>No similar reports found.</p>}
             {similar.map(({ report: r, similarity }) => (
               <div key={r.id} style={{ padding: "0.6rem 0", borderBottom: "1px solid var(--border)" }}>
-                <Link href={`/admin/reports/${r.id}`}>
-                  {categoryIcon(r.category)} {r.tracking_code}
+                <Link href={`/admin/reports/${r.id}`} style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                  <CategoryIcon category={r.category} size={15} /> {r.tracking_code}
                 </Link>
                 <div style={{ fontSize: "0.85rem", color: "var(--text-soft)" }}>{r.description}</div>
                 <div className="progress-track">

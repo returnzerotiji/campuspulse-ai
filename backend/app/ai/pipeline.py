@@ -51,7 +51,7 @@ def analyze_report(
     department = department_for_category(category)
 
     embedding = embed_text(f"{description}\nLocation: {location}")
-    cluster_id, duplicate_of = assign_cluster(db, embedding)
+    cluster_id, duplicate_of = assign_cluster(db, embedding, category=category)
 
     top_matches = find_similar(db, embedding, limit=3)
     ai_raw_response = {

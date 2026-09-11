@@ -58,6 +58,7 @@ class ReportOut(BaseModel):
     severity: str
     severity_source: str
     priority_score: float
+    priority_breakdown: dict | None
     department: str
     department_overridden: bool
     status: str

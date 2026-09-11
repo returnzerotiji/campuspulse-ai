@@ -84,6 +84,14 @@ export interface HealthStatus {
   database?: string;
 }
 
+export interface PriorityBreakdown {
+  severity_base: number;
+  cluster_bonus: number;
+  category_weight: number;
+  persistence_bonus: number;
+  total: number;
+}
+
 export interface Report {
   id: string;
   tracking_code: string;
@@ -96,6 +104,7 @@ export interface Report {
   severity: string;
   severity_source: string;
   priority_score: number;
+  priority_breakdown: PriorityBreakdown | null;
   department: string;
   department_overridden: boolean;
   status: string;

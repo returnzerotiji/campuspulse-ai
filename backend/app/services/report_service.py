@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.ai import similarity
 from app.ai.pipeline import analyze_report
-from app.ai.priority import compute_priority
+from app.ai.priority import compute_priority_breakdown
 from app.core.errors import NotFoundError
 from app.db.models import Report, ReportEvent
 from app.schemas.report import ReportCreate, ReportUpdate
@@ -33,9 +33,11 @@ def recompute_cluster_priority(db: Session, cluster_id: uuid.UUID) -> None:
     size = len(members)
     first_seen_at = min(m.created_at for m in members)
     for member in members:
-        member.priority_score = compute_priority(
+        breakdown = compute_priority_breakdown(
             severity=member.severity, category=member.category, cluster_size=size, first_seen_at=first_seen_at
         )
+        member.priority_score = breakdown["total"]
+        member.priority_breakdown = breakdown
     db.commit()
 
 

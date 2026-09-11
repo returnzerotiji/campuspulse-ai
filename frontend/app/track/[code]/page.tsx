@@ -2,8 +2,9 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { ArrowLeft, Link2, MapPin } from "lucide-react";
 import { api, ApiError, type ReportDetail } from "@/lib/api";
-import { categoryIcon, STATUS_FLOW, STATUS_LABEL } from "@/lib/display";
+import { CategoryIcon, STATUS_FLOW, STATUS_LABEL } from "@/lib/display";
 
 export default function TrackReportPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -29,7 +30,9 @@ export default function TrackReportPage({ params }: { params: Promise<{ code: st
   return (
     <main>
       <p>
-        <Link href="/">&larr; Back to home</Link>
+        <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+          <ArrowLeft size={15} /> Back to home
+        </Link>
       </p>
       <h1>Track report</h1>
       <p style={{ marginBottom: "1rem" }}>
@@ -59,16 +62,16 @@ export default function TrackReportPage({ params }: { params: Promise<{ code: st
             <br />
             {report.description}
           </p>
-          <p>📍 {report.location}</p>
+          <p style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <MapPin size={15} /> {report.location}
+          </p>
           <p>
             <span className="category-chip">
-              {categoryIcon(report.category)} {report.category}
+              <CategoryIcon category={report.category} /> {report.category}
             </span>{" "}
             · handled by <strong>{report.department}</strong>
           </p>
-          <p style={{ fontSize: "0.85rem" }}>
-            Submitted {new Date(report.created_at).toLocaleString()}
-          </p>
+          <p style={{ fontSize: "0.85rem" }}>Submitted {new Date(report.created_at).toLocaleString()}</p>
 
           {report.duplicate_of && (
             <div
@@ -78,10 +81,15 @@ export default function TrackReportPage({ params }: { params: Promise<{ code: st
                 background: "var(--info-bg)",
                 borderRadius: "var(--radius-sm)",
                 fontSize: "0.88rem",
+                display: "flex",
+                gap: "0.5rem",
               }}
             >
-              🔗 This looks like the same issue as an existing report already being tracked — we&rsquo;ve
-              linked it so it counts toward that issue&rsquo;s priority.
+              <Link2 size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+              <span>
+                This looks like the same issue as an existing report already being tracked — we&rsquo;ve
+                linked it so it counts toward that issue&rsquo;s priority.
+              </span>
             </div>
           )}
 
