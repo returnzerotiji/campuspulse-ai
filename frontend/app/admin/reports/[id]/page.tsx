@@ -3,8 +3,9 @@
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError, type ReportDetail, type SimilarReport } from "@/lib/api";
-import { useAdminAuth } from "@/lib/useAdminAuth";
+import { useAdminAuth } from "@/lib/AdminAuthContext";
 import LoginForm from "@/components/LoginForm";
+import { categoryIcon, priorityClass } from "@/lib/display";
 
 const STATUSES = ["new", "acknowledged", "in_progress", "resolved", "closed"];
 const SEVERITIES = ["low", "medium", "high", "critical"];
@@ -12,12 +13,11 @@ const SEVERITIES = ["low", "medium", "high", "critical"];
 export default function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { loading, isAuthenticated } = useAdminAuth();
-  const [refreshKey, setRefreshKey] = useState(0);
 
   if (loading) {
     return (
       <main className="wide-main">
-        <p>Loading...</p>
+        <div className="spinner" />
       </main>
     );
   }
@@ -25,14 +25,14 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
   if (!isAuthenticated) {
     return (
       <main className="wide-main">
-        <LoginForm onSuccess={() => setRefreshKey((k) => k + 1)} />
+        <LoginForm />
       </main>
     );
   }
 
   return (
     <main className="wide-main">
-      <ReportDetailContent key={refreshKey} id={id} />
+      <ReportDetailContent id={id} />
     </main>
   );
 }
@@ -48,6 +48,7 @@ function ReportDetailContent({ id }: { id: string }) {
   const [severity, setSeverity] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const load = useCallback(() => {
     api
@@ -74,6 +75,8 @@ function ReportDetailContent({ id }: { id: string }) {
     try {
       await api.updateReport(id, { status, department, severity, note: note || undefined });
       setNote("");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1800);
       load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Update failed.");
@@ -83,7 +86,8 @@ function ReportDetailContent({ id }: { id: string }) {
   }
 
   if (error && !report) return <p className="status-bad">{error}</p>;
-  if (!report) return <p>Loading...</p>;
+  if (!report) return <div className="spinner" />;
+
 
   return (
     <>
@@ -92,107 +96,136 @@ function ReportDetailContent({ id }: { id: string }) {
       </p>
 
       <div className="top-bar">
-        <h1 style={{ marginBottom: 0 }}>{report.tracking_code}</h1>
-        <span className="badge badge-high">priority {report.priority_score}</span>
+        <div>
+          <h1 style={{ marginBottom: "0.2rem" }}>
+            <code style={{ fontSize: "1.3rem" }}>{report.tracking_code}</code>
+          </h1>
+          <span className="category-chip">
+            {categoryIcon(report.category)} {report.category}
+          </span>
+        </div>
+        <span className={`priority-pill ${priorityClass(report.priority_score)}`} style={{ fontSize: "1.1rem", padding: "0.4rem 0.9rem" }}>
+          {report.priority_score}
+        </span>
       </div>
 
-      <div className="card">
-        <p>
-          <strong>Description:</strong> {report.description}
-        </p>
-        {report.ai_summary && (
-          <p>
-            <strong>AI summary:</strong> {report.ai_summary}
-          </p>
-        )}
-        <p>
-          <strong>Location:</strong> {report.location}
-        </p>
-        {report.image_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}${report.image_url}`}
-            alt="Report attachment"
-            style={{ maxWidth: 320, borderRadius: 8, marginTop: "0.5rem" }}
-          />
-        )}
-        <p style={{ marginTop: "0.5rem" }}>
-          <strong>Category:</strong> {report.category} ({report.category_source}) &nbsp;|&nbsp;{" "}
-          <strong>Reported by:</strong> {report.reporter_email || "anonymous"}
-        </p>
-        {report.duplicate_of && (
-          <p className="status-bad">
-            Linked as a duplicate of report <code>{report.duplicate_of}</code>.
-          </p>
-        )}
-      </div>
-
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Triage</h3>
-        <form onSubmit={handleSave}>
-          <label>Status</label>
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-
-          <label>Department</label>
-          <select value={department} onChange={(e) => setDepartment(e.target.value)}>
-            {departments.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-
-          <label>Severity</label>
-          <select value={severity} onChange={(e) => setSeverity(e.target.value)}>
-            {SEVERITIES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-
-          <label>Note (optional)</label>
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Ticket opened with vendor" />
-
-          <button type="submit" disabled={saving}>
-            {saving ? "Saving..." : "Save changes"}
-          </button>
-        </form>
-        {error && <p className="status-bad" style={{ marginTop: "1rem" }}>{error}</p>}
-      </div>
-
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Timeline</h3>
-        <ul>
-          {report.events.map((event) => (
-            <li key={event.id}>
-              {new Date(event.created_at).toLocaleString()} &mdash; <strong>{event.event_type}</strong>
-              {event.old_value && event.new_value ? `: ${event.old_value} → ${event.new_value}` : ""}
-              {event.note ? ` (${event.note})` : ""} &mdash; {event.actor}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Similar / related reports</h3>
-        {similar.length === 0 && <p style={{ opacity: 0.7 }}>No similar reports found.</p>}
-        {similar.map(({ report: r, similarity }) => (
-          <div key={r.id} style={{ padding: "0.5rem 0", borderBottom: "1px solid #eee" }}>
-            <Link href={`/admin/reports/${r.id}`}>
-              {r.tracking_code} &mdash; {r.description}
-            </Link>
-            <div style={{ opacity: 0.6, fontSize: "0.85rem" }}>
-              similarity {(similarity * 100).toFixed(1)}% · {r.status} · {r.location}
-            </div>
+      <div className="detail-grid">
+        <div>
+          <div className="card">
+            <p>
+              <strong>Description</strong>
+              <br />
+              {report.description}
+            </p>
+            {report.ai_summary && (
+              <div
+                style={{
+                  marginTop: "0.75rem",
+                  padding: "0.6rem 0.8rem",
+                  background: "var(--info-bg)",
+                  borderRadius: "var(--radius-sm)",
+                  fontSize: "0.88rem",
+                }}
+              >
+                🤖 <strong>AI summary:</strong> {report.ai_summary}
+              </div>
+            )}
+            <p style={{ marginTop: "0.75rem" }}>📍 {report.location}</p>
+            {report.image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}${report.image_url}`}
+                alt="Report attachment"
+                style={{ maxWidth: "100%", borderRadius: "var(--radius)", marginTop: "0.75rem", boxShadow: "var(--shadow-sm)" }}
+              />
+            )}
+            <p style={{ marginTop: "0.75rem", fontSize: "0.85rem" }}>
+              Reported by {report.reporter_email || "anonymous"} · category set by {report.category_source} ·
+              severity set by {report.severity_source}
+            </p>
+            {report.duplicate_of && (
+              <p className="status-bad" style={{ marginTop: "0.5rem" }}>
+                ⚠ Linked as a duplicate of <code>{report.duplicate_of}</code>
+              </p>
+            )}
           </div>
-        ))}
+
+          <div className="card">
+            <h3>Timeline</h3>
+            <ul className="timeline">
+              {report.events.map((event) => (
+                <li key={event.id}>
+                  <div className="timeline-time">{new Date(event.created_at).toLocaleString()}</div>
+                  <strong>{event.event_type.replace(/_/g, " ")}</strong>
+                  {event.old_value && event.new_value ? `: ${event.old_value} → ${event.new_value}` : ""}
+                  {event.note ? ` — "${event.note}"` : ""}
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-faint)" }}>by {event.actor}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div>
+          <div className="card">
+            <h3>Triage</h3>
+            <form onSubmit={handleSave}>
+              <label>Status</label>
+              <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+
+              <label>Department</label>
+              <select value={department} onChange={(e) => setDepartment(e.target.value)}>
+                {departments.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+
+              <label>Severity</label>
+              <select value={severity} onChange={(e) => setSeverity(e.target.value)}>
+                {SEVERITIES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+
+              <label>Note (optional)</label>
+              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Ticket opened with vendor" />
+
+              <button type="submit" disabled={saving} style={{ width: "100%" }}>
+                {saved ? "Saved ✓" : saving ? "Saving…" : "Save changes"}
+              </button>
+            </form>
+            {error && <p className="status-bad" style={{ marginTop: "1rem" }}>{error}</p>}
+          </div>
+
+          <div className="card">
+            <h3>Similar / related reports</h3>
+            {similar.length === 0 && <p style={{ opacity: 0.7 }}>No similar reports found.</p>}
+            {similar.map(({ report: r, similarity }) => (
+              <div key={r.id} style={{ padding: "0.6rem 0", borderBottom: "1px solid var(--border)" }}>
+                <Link href={`/admin/reports/${r.id}`}>
+                  {categoryIcon(r.category)} {r.tracking_code}
+                </Link>
+                <div style={{ fontSize: "0.85rem", color: "var(--text-soft)" }}>{r.description}</div>
+                <div className="progress-track">
+                  <div className="progress-fill" style={{ width: `${Math.round(similarity * 100)}%` }} />
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-faint)", marginTop: "0.2rem" }}>
+                  {(similarity * 100).toFixed(1)}% similar · {r.status}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </>
   );

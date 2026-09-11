@@ -13,20 +13,20 @@ import {
   YAxis,
 } from "recharts";
 import { api, ApiError, type Hotspot, type Report, type StatsOverview, type TrendPoint } from "@/lib/api";
-import { useAdminAuth } from "@/lib/useAdminAuth";
+import { useAdminAuth } from "@/lib/AdminAuthContext";
 import LoginForm from "@/components/LoginForm";
 import StatTile from "@/components/StatTile";
+import { categoryIcon, priorityClass } from "@/lib/display";
 
 const STATUSES = ["new", "acknowledged", "in_progress", "resolved", "closed"];
 
 export default function AdminDashboardPage() {
   const { admin, loading, logout, isAuthenticated } = useAdminAuth();
-  const [refreshKey, setRefreshKey] = useState(0);
 
   if (loading) {
     return (
       <main className="wide-main">
-        <p>Loading...</p>
+        <div className="spinner" />
       </main>
     );
   }
@@ -37,7 +37,7 @@ export default function AdminDashboardPage() {
         <p>
           <Link href="/">&larr; Back to home</Link>
         </p>
-        <LoginForm onSuccess={() => setRefreshKey((k) => k + 1)} />
+        <LoginForm />
       </main>
     );
   }
@@ -45,14 +45,24 @@ export default function AdminDashboardPage() {
   return (
     <main className="wide-main">
       <div className="top-bar">
-        <div>
-          <h1 style={{ marginBottom: 0 }}>CampusPulse Intelligence Dashboard</h1>
-          <p style={{ opacity: 0.7, marginTop: "0.25rem" }}>Signed in as {admin?.email}</p>
+        <div className="brand">
+          <span className="brand-mark">🧠</span>
+          <div>
+            <div>CampusPulse</div>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-faint)", fontWeight: 500 }}>
+              Intelligence Dashboard
+            </div>
+          </div>
         </div>
-        <button onClick={logout}>Sign out</button>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.9rem" }}>
+          <span style={{ fontSize: "0.85rem", color: "var(--text-soft)" }}>👋 {admin?.email}</span>
+          <button className="secondary" onClick={logout} style={{ marginTop: 0 }}>
+            Sign out
+          </button>
+        </div>
       </div>
 
-      <Dashboard key={refreshKey} />
+      <Dashboard />
     </main>
   );
 }
@@ -98,75 +108,94 @@ function Dashboard() {
   return (
     <>
       <div className="stat-grid">
-        <StatTile label="Total reports" value={overview?.total_reports ?? "-"} />
-        <StatTile label="Open" value={overview?.open_reports ?? "-"} />
-        <StatTile label="Resolved" value={overview?.resolved_reports ?? "-"} />
+        <StatTile icon="📋" label="Total reports" value={overview?.total_reports ?? "-"} accent="#6366f1" />
+        <StatTile icon="🟠" label="Open" value={overview?.open_reports ?? "-"} accent="#f59e0b" />
+        <StatTile icon="✅" label="Resolved" value={overview?.resolved_reports ?? "-"} accent="#10b981" />
         <StatTile
+          icon="⏱️"
           label="Avg. resolution"
           value={overview?.avg_resolution_hours != null ? `${overview.avg_resolution_hours}h` : "-"}
+          accent="#06b6d4"
         />
         <StatTile
+          icon="🔥"
           label="Systemic issues"
           value={overview?.systemic_clusters ?? "-"}
           hint="clusters with 2+ reports"
+          accent="#ef4444"
         />
         <StatTile
+          icon="⏳"
           label="Backlog"
           value={overview?.backlog_over_week ?? "-"}
           hint="open > 7 days"
+          accent="#8b5cf6"
         />
       </div>
 
       <section>
-        <h2>Reports over time (last 14 days)</h2>
-        <div style={{ width: "100%", height: 220 }}>
+        <h2>📈 Reports over time</h2>
+        <div className="card" style={{ width: "100%", height: 240 }}>
           <ResponsiveContainer>
             <BarChart data={trends}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={30} />
-              <Tooltip />
-              <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} />
+              <defs>
+                <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#8b5cf6" />
+                  <stop offset="100%" stopColor="#6366f1" />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.25} vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--text-faint)" }} axisLine={false} tickLine={false} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "var(--text-faint)" }} width={30} axisLine={false} tickLine={false} />
+              <Tooltip
+                contentStyle={{ borderRadius: 10, border: "1px solid var(--border)", fontSize: "0.85rem" }}
+              />
+              <Bar dataKey="count" fill="url(#barFill)" radius={[6, 6, 0, 0]} maxBarSize={36} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </section>
 
       <section>
-        <h2>Systemic issues (hotspots)</h2>
-        {hotspots.length === 0 && <p style={{ opacity: 0.7 }}>No recurring clusters yet.</p>}
-        {hotspots.map((h) => (
-          <div
-            key={h.cluster_id}
-            className="card"
-            style={{ cursor: "pointer" }}
-            onClick={() => {
-              setClusterFilter(h.cluster_id);
-              document.getElementById("all-reports")?.scrollIntoView({ behavior: "smooth" });
-            }}
-          >
-            <div className="top-bar">
-              <strong>{h.representative_summary}</strong>
-              <span className="badge badge-high">priority {h.max_priority}</span>
-            </div>
-            <p style={{ opacity: 0.75, marginTop: "0.4rem" }}>
-              {h.report_count} reports ({h.open_count} open) · {h.categories.join(", ")} ·{" "}
-              {h.departments.join(", ")}
-            </p>
-            <p style={{ opacity: 0.6, fontSize: "0.85rem" }}>
-              Locations: {h.locations.join("; ")}
-            </p>
+        <h2>🔥 Systemic issues</h2>
+        {hotspots.length === 0 && (
+          <div className="card" style={{ opacity: 0.7 }}>
+            No recurring clusters yet — submit a few similar reports to see grouping in action.
           </div>
+        )}
+        {hotspots.map((h) => (
+            <div
+              key={h.cluster_id}
+              className="card clickable"
+              onClick={() => {
+                setClusterFilter(h.cluster_id);
+                document.getElementById("all-reports")?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              <div className="top-bar">
+                <strong>
+                  {h.categories.map((c) => categoryIcon(c)).join(" ")} {h.representative_summary}
+                </strong>
+                <span className={`priority-pill ${priorityClass(h.max_priority)}`}>
+                  {h.max_priority}
+                </span>
+              </div>
+              <p style={{ marginTop: "0.5rem" }}>
+                <strong>{h.report_count}</strong> reports (<strong>{h.open_count}</strong> open) ·{" "}
+                {h.categories.join(", ")} · routed to {h.departments.join(", ")}
+              </p>
+              <p style={{ fontSize: "0.82rem" }}>📍 {h.locations.join(" · ")}</p>
+            </div>
         ))}
       </section>
 
       <section id="all-reports">
         <div className="top-bar">
-          <h2>All reports</h2>
+          <h2>📋 All reports</h2>
         </div>
         <div className="filter-bar">
-          <label style={{ margin: 0 }}>
-            Status:{" "}
+          <label>
+            Status
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">All</option>
               {STATUSES.map((s) => (
@@ -176,8 +205,8 @@ function Dashboard() {
               ))}
             </select>
           </label>
-          <label style={{ margin: 0 }}>
-            Department:{" "}
+          <label>
+            Department
             <select value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value)}>
               <option value="">All</option>
               {departments.map((d) => (
@@ -188,9 +217,9 @@ function Dashboard() {
             </select>
           </label>
           {clusterFilter && (
-            <span className="badge badge-in_progress">
+            <span className="badge badge-acknowledged">
               Filtered to one cluster{" "}
-              <button className="link-button" onClick={() => setClusterFilter(null)} style={{ marginLeft: "0.4rem" }}>
+              <button className="link-button" onClick={() => setClusterFilter(null)} style={{ marginLeft: "0.3rem" }}>
                 clear
               </button>
             </span>
@@ -202,7 +231,7 @@ function Dashboard() {
             <thead>
               <tr>
                 <th>Priority</th>
-                <th>Tracking code</th>
+                <th>Code</th>
                 <th>Description</th>
                 <th>Category</th>
                 <th>Severity</th>
@@ -212,19 +241,29 @@ function Dashboard() {
             </thead>
             <tbody>
               {reports.map((r) => (
-                <tr key={r.id} onClick={() => router.push(`/admin/reports/${r.id}`)}>
-                  <td>{r.priority_score}</td>
-                  <td>{r.tracking_code}</td>
-                  <td style={{ maxWidth: 320 }}>{r.description}</td>
-                  <td>{r.category}</td>
-                  <td>
-                    <span className={`badge badge-${r.severity}`}>{r.severity}</span>
-                  </td>
-                  <td>{r.department}</td>
-                  <td>
-                    <span className={`badge badge-${r.status}`}>{r.status}</span>
-                  </td>
-                </tr>
+                  <tr key={r.id} onClick={() => router.push(`/admin/reports/${r.id}`)}>
+                    <td>
+                      <span className={`priority-pill ${priorityClass(r.priority_score)}`}>
+                        {r.priority_score}
+                      </span>
+                    </td>
+                    <td>
+                      <code>{r.tracking_code}</code>
+                    </td>
+                    <td style={{ maxWidth: 320 }}>{r.description}</td>
+                    <td>
+                      <span className="category-chip">
+                        {categoryIcon(r.category)} {r.category}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge badge-${r.severity}`}>{r.severity}</span>
+                    </td>
+                    <td>{r.department}</td>
+                    <td>
+                      <span className={`badge badge-${r.status}`}>{r.status}</span>
+                    </td>
+                  </tr>
               ))}
               {reports.length === 0 && (
                 <tr>

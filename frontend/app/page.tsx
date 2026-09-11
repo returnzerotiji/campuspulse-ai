@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError, type HealthStatus } from "@/lib/api";
+import { categoryIcon } from "@/lib/display";
 
 export default function HomePage() {
   const [health, setHealth] = useState<HealthStatus | null>(null);
@@ -18,6 +19,7 @@ export default function HomePage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [trackingCode, setTrackingCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     api
@@ -55,104 +57,147 @@ export default function HomePage() {
     }
   }
 
+  function copyCode() {
+    if (!trackingCode) return;
+    navigator.clipboard?.writeText(trackingCode).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
   return (
     <main>
-      <h1>CampusPulse</h1>
-      <p style={{ opacity: 0.75 }}>AI-powered campus problem intelligence.</p>
-      <p>
+      <div className="hero">
+        <span className="hero-badge">✨ AI-powered campus intelligence</span>
+        <h1>CampusPulse</h1>
+        <p>
+          Spot a problem on campus? Tell us once. Our AI groups it with similar reports,
+          prioritizes it, and routes it to the right team automatically.
+        </p>
+      </div>
+
+      <p style={{ textAlign: "center", fontSize: "0.85rem" }}>
         Backend status:{" "}
         {health ? (
-          <span className="status-ok">
-            {health.status} ({health.environment})
-          </span>
+          <span className="status-ok">● {health.status}</span>
         ) : healthError ? (
-          <span className="status-bad">{healthError}</span>
+          <span className="status-bad">● offline</span>
         ) : (
-          "checking..."
+          <span style={{ color: "var(--text-faint)" }}>checking…</span>
         )}
       </p>
 
-      <h2 style={{ marginTop: "2rem" }}>Report a campus problem</h2>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="description">Description</label>
-        <textarea
-          id="description"
-          required
-          minLength={10}
-          rows={4}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="e.g. The water fountain outside Block C has been leaking for two days."
-        />
-
-        <label htmlFor="location">Location</label>
-        <input
-          id="location"
-          required
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          placeholder="e.g. Block C, near the main entrance"
-        />
-
-        <label htmlFor="category">Category (optional — AI will infer it if left blank)</label>
-        <select id="category" value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="">Not sure / let AI decide</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-
-        <label htmlFor="severity">Severity (optional — AI will infer it if left blank)</label>
-        <select id="severity" value={severity} onChange={(e) => setSeverity(e.target.value)}>
-          <option value="">Not sure / let AI decide</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-          <option value="critical">Critical</option>
-        </select>
-
-        <label htmlFor="image">Photo (optional)</label>
-        <input
-          id="image"
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif"
-          onChange={(e) => setImage(e.target.files?.[0] ?? null)}
-        />
-
-        <label htmlFor="reporterEmail">Your email (optional)</label>
-        <input
-          id="reporterEmail"
-          type="email"
-          value={reporterEmail}
-          onChange={(e) => setReporterEmail(e.target.value)}
-          placeholder="so we could follow up (not required)"
-        />
-
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Submitting..." : "Submit report"}
-        </button>
-      </form>
-
-      {submitError && (
-        <p className="status-bad" style={{ marginTop: "1rem" }}>
-          {submitError}
-        </p>
-      )}
-
-      {trackingCode && (
-        <div className="card">
-          <p>Report submitted! Your tracking code is:</p>
-          <p style={{ fontSize: "1.5rem", fontWeight: 700 }}>{trackingCode}</p>
-          <p>
-            <Link href={`/track/${trackingCode}`}>Track this report &rarr;</Link>
+      {trackingCode ? (
+        <div className="card glass-card" style={{ textAlign: "center", padding: "2rem" }}>
+          <div style={{ fontSize: "2.5rem" }}>✅</div>
+          <h2 style={{ marginTop: "0.75rem" }}>Report submitted!</h2>
+          <p>Our AI has already classified and prioritized it. Save your tracking code:</p>
+          <div
+            style={{
+              fontSize: "1.8rem",
+              fontWeight: 800,
+              fontFamily: "var(--font-display)",
+              letterSpacing: "0.03em",
+              margin: "0.75rem 0",
+              color: "var(--brand-2)",
+            }}
+          >
+            {trackingCode}
+          </div>
+          <div style={{ display: "flex", gap: "0.6rem", justifyContent: "center", flexWrap: "wrap" }}>
+            <button onClick={copyCode} className="secondary" style={{ marginTop: 0 }}>
+              {copied ? "Copied ✓" : "Copy code"}
+            </button>
+            <Link href={`/track/${trackingCode}`}>
+              <button style={{ marginTop: 0 }}>Track this report →</button>
+            </Link>
+          </div>
+          <p style={{ marginTop: "1.25rem" }}>
+            <button className="link-button" onClick={() => setTrackingCode(null)}>
+              Submit another report
+            </button>
           </p>
+        </div>
+      ) : (
+        <div className="card">
+          <h2>Report a campus problem</h2>
+          <form onSubmit={handleSubmit}>
+            <label htmlFor="description">What&rsquo;s the problem?</label>
+            <textarea
+              id="description"
+              required
+              minLength={10}
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. The water fountain outside Block C has been leaking for two days."
+            />
+
+            <label htmlFor="location">Where is it?</label>
+            <input
+              id="location"
+              required
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="e.g. Block C, near the main entrance"
+            />
+
+            <div className="form-row">
+              <div>
+                <label htmlFor="category">Category</label>
+                <select id="category" value={category} onChange={(e) => setCategory(e.target.value)}>
+                  <option value="">🤖 Let AI decide</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>
+                      {categoryIcon(c)} {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="severity">Severity</label>
+                <select id="severity" value={severity} onChange={(e) => setSeverity(e.target.value)}>
+                  <option value="">🤖 Let AI decide</option>
+                  <option value="low">🟢 Low</option>
+                  <option value="medium">🟡 Medium</option>
+                  <option value="high">🟠 High</option>
+                  <option value="critical">🔴 Critical</option>
+                </select>
+              </div>
+            </div>
+
+            <label htmlFor="image">Photo (optional)</label>
+            <input
+              id="image"
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              onChange={(e) => setImage(e.target.files?.[0] ?? null)}
+            />
+
+            <label htmlFor="reporterEmail">Your email (optional, for follow-up)</label>
+            <input
+              id="reporterEmail"
+              type="email"
+              value={reporterEmail}
+              onChange={(e) => setReporterEmail(e.target.value)}
+              placeholder="you@campus.edu"
+            />
+
+            <button type="submit" disabled={submitting} style={{ width: "100%" }}>
+              {submitting ? "Analyzing with AI…" : "Submit report"}
+            </button>
+          </form>
+
+          {submitError && (
+            <p className="status-bad" style={{ marginTop: "1rem" }}>
+              {submitError}
+            </p>
+          )}
         </div>
       )}
 
-      <p style={{ marginTop: "2rem" }}>
-        <Link href="/admin">Admin dashboard &rarr;</Link>
+      <p style={{ marginTop: "2.5rem", textAlign: "center" }}>
+        <Link href="/admin">Admin dashboard →</Link>
       </p>
     </main>
   );

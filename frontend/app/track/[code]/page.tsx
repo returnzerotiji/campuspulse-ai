@@ -3,14 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError, type ReportDetail } from "@/lib/api";
-
-const STATUS_LABEL: Record<string, string> = {
-  new: "Received",
-  acknowledged: "Acknowledged",
-  in_progress: "In progress",
-  resolved: "Resolved",
-  closed: "Closed",
-};
+import { categoryIcon, STATUS_FLOW, STATUS_LABEL } from "@/lib/display";
 
 export default function TrackReportPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -26,53 +19,79 @@ export default function TrackReportPage({ params }: { params: Promise<{ code: st
       .finally(() => setLoading(false));
   }, [code]);
 
+  const isClosed = report?.status === "closed";
+  const currentIndex = report
+    ? isClosed
+      ? STATUS_FLOW.length - 1
+      : STATUS_FLOW.indexOf(report.status as (typeof STATUS_FLOW)[number])
+    : -1;
+
   return (
     <main>
       <p>
         <Link href="/">&larr; Back to home</Link>
       </p>
-      <h1>Track report {code}</h1>
+      <h1>Track report</h1>
+      <p style={{ marginBottom: "1rem" }}>
+        <code style={{ fontSize: "1.1rem" }}>{code}</code>
+      </p>
 
-      {loading && <p>Loading...</p>}
+      {loading && <div className="spinner" />}
       {error && <p className="status-bad">{error}</p>}
 
       {report && (
         <div className="card">
-          <p>
-            <strong>Status:</strong>{" "}
+          <div className="stepper">
+            {STATUS_FLOW.map((s, i) => (
+              <div key={s} className={`step ${i < currentIndex ? "done" : ""} ${i === currentIndex ? "current" : ""}`}>
+                <div className="step-dot">{i < currentIndex ? "✓" : i + 1}</div>
+                <div className="step-label">{STATUS_LABEL[s]}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: "1.5rem" }}>
             <span className={`badge badge-${report.status}`}>{STATUS_LABEL[report.status] ?? report.status}</span>
+          </div>
+
+          <p style={{ marginTop: "1rem" }}>
+            <strong>Description</strong>
+            <br />
+            {report.description}
           </p>
+          <p>📍 {report.location}</p>
           <p>
-            <strong>Description:</strong> {report.description}
+            <span className="category-chip">
+              {categoryIcon(report.category)} {report.category}
+            </span>{" "}
+            · handled by <strong>{report.department}</strong>
           </p>
-          <p>
-            <strong>Location:</strong> {report.location}
-          </p>
-          <p>
-            <strong>Category:</strong> {report.category}
-          </p>
-          <p>
-            <strong>Handled by:</strong> {report.department}
-          </p>
-          <p>
-            <strong>Submitted:</strong> {new Date(report.created_at).toLocaleString()}
+          <p style={{ fontSize: "0.85rem" }}>
+            Submitted {new Date(report.created_at).toLocaleString()}
           </p>
 
           {report.duplicate_of && (
-            <p style={{ opacity: 0.8 }}>
-              This looks like the same issue as an existing report already being tracked -- we&rsquo;ve
+            <div
+              style={{
+                marginTop: "0.75rem",
+                padding: "0.6rem 0.8rem",
+                background: "var(--info-bg)",
+                borderRadius: "var(--radius-sm)",
+                fontSize: "0.88rem",
+              }}
+            >
+              🔗 This looks like the same issue as an existing report already being tracked — we&rsquo;ve
               linked it so it counts toward that issue&rsquo;s priority.
-            </p>
+            </div>
           )}
 
           <h3 style={{ marginTop: "1.5rem" }}>Timeline</h3>
-          <ul>
+          <ul className="timeline">
             {report.events.map((event) => (
               <li key={event.id}>
-                {new Date(event.created_at).toLocaleString()} &mdash; {event.event_type}
-                {event.old_value && event.new_value
-                  ? `: ${event.old_value} → ${event.new_value}`
-                  : ""}
+                <div className="timeline-time">{new Date(event.created_at).toLocaleString()}</div>
+                {event.event_type.replace(/_/g, " ")}
+                {event.old_value && event.new_value ? `: ${event.old_value} → ${event.new_value}` : ""}
               </li>
             ))}
           </ul>
