@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Link2, MapPin } from "lucide-react";
+import { ArrowLeft, Link2, MapPin, SearchX } from "lucide-react";
 import { api, ApiError, type ReportDetail } from "@/lib/api";
 import { CategoryIcon, STATUS_FLOW, STATUS_LABEL } from "@/lib/display";
 
@@ -11,6 +11,10 @@ export default function TrackReportPage({ params }: { params: Promise<{ code: st
   const [report, setReport] = useState<ReportDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    document.title = `Track ${code} · CampusPulse`;
+  }, [code]);
 
   useEffect(() => {
     api
@@ -40,7 +44,16 @@ export default function TrackReportPage({ params }: { params: Promise<{ code: st
       </p>
 
       {loading && <div className="spinner" />}
-      {error && <p className="status-bad">{error}</p>}
+      {error && (
+        <div className="card" style={{ textAlign: "center", padding: "2.5rem 1.5rem" }}>
+          <SearchX size={32} style={{ color: "var(--text-faint)", marginBottom: "0.5rem" }} />
+          <h3 style={{ marginBottom: "0.3rem" }}>No report found</h3>
+          <p>
+            We couldn&rsquo;t find a report for <code>{code}</code>. Double-check the tracking code from
+            your confirmation.
+          </p>
+        </div>
+      )}
 
       {report && (
         <div className="card">

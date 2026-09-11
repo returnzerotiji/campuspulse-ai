@@ -34,6 +34,10 @@ const STATUSES = ["new", "acknowledged", "in_progress", "resolved", "closed"];
 export default function AdminDashboardPage() {
   const { admin, loading, isAuthenticated } = useAdminAuth();
 
+  useEffect(() => {
+    document.title = "Dashboard · CampusPulse";
+  }, []);
+
   if (loading) {
     return (
       <main className="wide-main">
@@ -259,6 +263,8 @@ function Dashboard() {
               <button
                 className="link-button"
                 onClick={() => setClusterFilter(null)}
+                aria-label="Clear cluster filter"
+                title="Clear cluster filter"
                 style={{ marginLeft: "0.3rem", display: "inline-flex", alignItems: "center" }}
               >
                 <X size={13} />

@@ -70,6 +70,10 @@ function ReportDetailContent({ id }: { id: string }) {
   }, [id]);
 
   useEffect(() => {
+    document.title = report ? `${report.tracking_code} · CampusPulse` : "Report · CampusPulse";
+  }, [report]);
+
+  useEffect(() => {
     load();
     api.departments().then((d) => setDepartments(d.map((x) => x.name))).catch(() => {});
   }, [load]);

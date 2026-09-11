@@ -65,13 +65,17 @@ CampusPulse/
 │   └── .env.example
 ├── frontend/
 │   ├── app/
-│   │   ├── page.tsx                 # home: health check + report submission form
-│   │   ├── track/[code]/             # student tracking page
+│   │   ├── page.tsx                 # landing page: pipeline/feature sections + report form
+│   │   ├── icon.svg                 # favicon (Next.js file-based metadata convention)
+│   │   ├── not-found.tsx / error.tsx  # branded 404 / crash screens
+│   │   ├── track/[code]/             # student tracking page (status stepper + timeline)
 │   │   └── admin/
-│   │       ├── page.tsx              # intelligence dashboard (stats, hotspots, trends, queue)
-│   │       └── reports/[id]/         # report detail: triage controls + similar-reports panel
-│   ├── components/                   # LoginForm, StatTile
-│   ├── lib/                          # api.ts (typed client), useAdminAuth.ts
+│   │       ├── layout.tsx            # wraps admin routes in AdminAuthProvider
+│   │       ├── page.tsx              # intelligence dashboard (KPIs, trend chart, hotspots, queue)
+│   │       └── reports/[id]/         # report detail: "why this priority" + similar-reports panel
+│   ├── components/                   # Sidebar, KpiCard, PriorityBar, AIDemo, Reveal,
+│   │                                  # AnimatedNumber, LoginForm
+│   ├── lib/                          # api.ts (typed client), AdminAuthContext.tsx, display.tsx
 │   └── .env.local.example
 ├── docker-compose.yml   # Postgres with the pgvector extension
 └── README.md
@@ -169,6 +173,36 @@ though they share almost no keywords, and the cluster's priority climbs with eac
   schema is still moving; if you change `db/models.py` on a machine with existing data, run
   `docker compose down -v && docker compose up -d` to reset the dev database rather than trying to
   hand-patch columns.
+- **Cross-category clustering has a stricter bar.** Two reports in the *same* category sharing
+  vocabulary ("slow", "disconnecting") are very likely the same recurring issue (threshold 0.72).
+  Two reports in *different* categories merely sharing tone ("dangerous", "unsafe") are not — an
+  exposed live wire and a dead streetlight are both safety concerns in the abstract, but grouping
+  them as one systemic issue would undermine the one thing this feature needs to be trustworthy
+  about, so cross-category clustering requires 0.88 (`app/ai/similarity.py`).
+- **Priority is explainable, not just a number.** The report detail page's "Why this priority?"
+  panel breaks the score into its four weighted terms (severity, cluster frequency, category risk,
+  persistence) — `priority_breakdown` is stored per-report specifically so the UI never has to
+  re-derive or guess at the reasoning.
+
+## Demo script (for judges)
+
+A ~90-second walkthrough that hits every claim in the pitch:
+
+1. **Submit 3 differently-worded Wi-Fi reports** on the home page (leave category/severity blank
+   each time): "Wi-Fi is extremely slow in Block A", "internet keeps disconnecting near the lab",
+   "online classes are affected by poor Wi-Fi in the building". Point out the AI-demo card in the
+   hero already showing this live — it's not staged, it's the same classifier.
+2. **Open `/admin`**, log in, and point at the **Systemic issues** section: all three reports
+   merged into one cluster despite sharing almost no keywords, and its priority is higher than any
+   single report's would be — that's the "50 tickets vs. 1 problem" pitch, live.
+3. **Submit a 4th report reusing near-identical wording** ("Wi-Fi is extremely slow in Block A and
+   keeps disconnecting") — refresh the dashboard and show it linked as a **duplicate**, not just
+   another cluster member.
+4. **Click into the critical electrical-hazard seed report** (or submit one: "exposed live wiring
+   near the electrical panel") and show the **"Why this priority?"** breakdown bar — judges can see
+   the exact arithmetic, not a black-box score.
+5. **Resolve a report** from the detail page and jump back to Overview — avg. resolution time and
+   the resolved count update immediately.
 
 ## What's deliberately out of scope
 
