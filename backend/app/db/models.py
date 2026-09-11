@@ -1,16 +1,19 @@
-"""ORM models for Phase 1 (no AI columns yet -- those land in Phase 3).
+"""ORM models: reports, their timeline events, admins, and departments.
 
-Schema matches the architecture doc, minus: embedding, cluster_id,
-duplicate_of, ai_summary/ai_raw_response are kept as nullable placeholders
-so Phase 2/3 can populate them without another migration touching this file.
+`embedding` backs semantic similarity/duplicate detection (pgvector cosine
+distance, see app/ai/similarity.py); `cluster_id` groups a report with its
+duplicates/related reports into one systemic issue; `duplicate_of` points at
+the canonical report when this one was auto-linked as a duplicate.
 """
 import uuid
 from datetime import datetime
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.ai.embeddings import EMBEDDING_DIM
 from app.db.session import Base
 
 
@@ -57,10 +60,17 @@ class Report(Base):
     department_overridden: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="new")
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    # Reserved for the AI pipeline (Phase 2+); unused and nullable for now.
     ai_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     ai_raw_response: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    # Semantic grouping (see app/ai/similarity.py).
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(EMBEDDING_DIM), nullable=True)
+    cluster_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    duplicate_of: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("reports.id", ondelete="SET NULL"), nullable=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

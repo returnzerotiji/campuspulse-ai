@@ -7,10 +7,14 @@ import { api, ApiError, type HealthStatus } from "@/lib/api";
 export default function HomePage() {
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
 
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
+  const [category, setCategory] = useState("");
+  const [severity, setSeverity] = useState("");
   const [reporterEmail, setReporterEmail] = useState("");
+  const [image, setImage] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [trackingCode, setTrackingCode] = useState<string | null>(null);
@@ -20,6 +24,7 @@ export default function HomePage() {
       .health()
       .then(setHealth)
       .catch((err: ApiError) => setHealthError(err.message));
+    api.categories().then(setCategories).catch(() => {});
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -31,12 +36,18 @@ export default function HomePage() {
       const report = await api.createReport({
         description,
         location,
+        category: category || undefined,
+        severity: (severity as "low" | "medium" | "high" | "critical") || undefined,
         reporter_email: reporterEmail || undefined,
+        image,
       });
       setTrackingCode(report.tracking_code);
       setDescription("");
       setLocation("");
+      setCategory("");
+      setSeverity("");
       setReporterEmail("");
+      setImage(null);
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : "Something went wrong.");
     } finally {
@@ -47,10 +58,13 @@ export default function HomePage() {
   return (
     <main>
       <h1>CampusPulse</h1>
+      <p style={{ opacity: 0.75 }}>AI-powered campus problem intelligence.</p>
       <p>
         Backend status:{" "}
         {health ? (
-          <span className="status-ok">{health.status} ({health.environment})</span>
+          <span className="status-ok">
+            {health.status} ({health.environment})
+          </span>
         ) : healthError ? (
           <span className="status-bad">{healthError}</span>
         ) : (
@@ -80,6 +94,33 @@ export default function HomePage() {
           placeholder="e.g. Block C, near the main entrance"
         />
 
+        <label htmlFor="category">Category (optional — AI will infer it if left blank)</label>
+        <select id="category" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <option value="">Not sure / let AI decide</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+
+        <label htmlFor="severity">Severity (optional — AI will infer it if left blank)</label>
+        <select id="severity" value={severity} onChange={(e) => setSeverity(e.target.value)}>
+          <option value="">Not sure / let AI decide</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
+
+        <label htmlFor="image">Photo (optional)</label>
+        <input
+          id="image"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          onChange={(e) => setImage(e.target.files?.[0] ?? null)}
+        />
+
         <label htmlFor="reporterEmail">Your email (optional)</label>
         <input
           id="reporterEmail"
@@ -94,7 +135,11 @@ export default function HomePage() {
         </button>
       </form>
 
-      {submitError && <p className="status-bad" style={{ marginTop: "1rem" }}>{submitError}</p>}
+      {submitError && (
+        <p className="status-bad" style={{ marginTop: "1rem" }}>
+          {submitError}
+        </p>
+      )}
 
       {trackingCode && (
         <div className="card">

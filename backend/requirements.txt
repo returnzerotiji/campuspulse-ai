@@ -5,3 +5,20 @@ psycopg2-binary==2.9.10
 pydantic==2.10.4
 pydantic-settings==2.7.1
 python-dotenv==1.0.1
+
+# AI: LLM classification (optional, falls back to keyword rules without a key)
+anthropic>=0.69.0
+
+# AI: local offline embeddings for semantic similarity/duplicate detection
+fastembed==0.4.2
+
+# Vector column type + pgvector extension support for SQLAlchemy
+pgvector==0.3.6
+
+# Auth
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+
+# Multipart form/image upload support (required by FastAPI's Form/File)
+python-multipart==0.0.20

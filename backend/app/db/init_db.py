@@ -1,25 +1,23 @@
 """Dev-time schema + seed helper.
 
-For a mini project, a full Alembic migration setup is unnecessary overhead
-while the schema is this small and still moving fast (Phase 1). This
-creates tables if missing and seeds the fixed department list. Alembic is
-worth introducing once the schema stabilizes (tracked for Phase 3, when
-pgvector columns are added).
+A full Alembic migration setup is unnecessary overhead for a mini project's
+schema; this creates tables (and the pgvector extension) if missing, and
+seeds departments + a single admin account. Worth revisiting with real
+migrations if this ever needs a production rollout history.
 """
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from app.db.models import Department
+from app.ai.taxonomy import DEPARTMENTS
+from app.config import settings
+from app.core.security import hash_password
+from app.db.models import Admin, Department
 from app.db.session import Base, SessionLocal, engine
 
-DEFAULT_DEPARTMENTS = [
-    ("Facilities", "Building maintenance: plumbing, electrical, structural issues."),
-    ("IT Services", "Network, Wi-Fi, computer labs, campus software systems."),
-    ("Housekeeping", "Cleanliness, waste disposal, pest control."),
-    ("Security", "Safety hazards, unauthorized access, lighting, theft."),
-    ("Grounds", "Outdoor areas, landscaping, parking lots, signage."),
-    ("Unassigned", "Default department until a report is triaged."),
-]
+
+def create_extensions() -> None:
+    with engine.begin() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
 
 def create_tables() -> None:
@@ -28,21 +26,37 @@ def create_tables() -> None:
 
 def seed_departments(db: Session) -> None:
     existing = set(db.scalars(select(Department.name)).all())
-    for name, description in DEFAULT_DEPARTMENTS:
+    for name, description in DEPARTMENTS:
         if name not in existing:
             db.add(Department(name=name, description=description))
     db.commit()
 
 
+def seed_admin(db: Session) -> None:
+    existing = db.scalar(select(Admin).where(Admin.email == settings.admin_email))
+    if existing is None:
+        db.add(
+            Admin(
+                email=settings.admin_email,
+                password_hash=hash_password(settings.admin_password),
+                name="Campus Admin",
+                department=None,
+            )
+        )
+        db.commit()
+
+
 def init_db() -> None:
+    create_extensions()
     create_tables()
     db = SessionLocal()
     try:
         seed_departments(db)
+        seed_admin(db)
     finally:
         db.close()
 
 
 if __name__ == "__main__":
     init_db()
-    print("Database initialized and departments seeded.")
+    print("Database initialized, departments seeded, admin account ready.")

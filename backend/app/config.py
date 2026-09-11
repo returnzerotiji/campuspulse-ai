@@ -21,6 +21,25 @@ class Settings(BaseSettings):
         "postgresql+psycopg2://campuspulse:campuspulse@localhost:5432/campuspulse"
     )
 
+    # --- AI ---
+    # Optional: without it, classification falls back to a keyword-based
+    # classifier so the app stays fully functional (see app/ai/classify.py).
+    anthropic_api_key: str | None = None
+    claude_model: str = "claude-opus-5"
+
+    # --- Auth ---
+    jwt_secret: str = "dev-only-change-me"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60 * 12
+
+    # Seed admin, created at startup if it doesn't already exist.
+    admin_email: str = "admin@campuspulse.local"
+    admin_password: str = "changeme123"
+
+    # --- Uploads ---
+    upload_dir: str = "uploads"
+    max_upload_mb: int = 5
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     @property

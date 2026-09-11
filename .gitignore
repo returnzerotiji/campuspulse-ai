@@ -36,3 +36,5 @@ Thumbs.db
 # --- Local data ---
 *.db
 *.sqlite3
+backend/uploads/
+*.log

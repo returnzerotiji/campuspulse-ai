@@ -4,6 +4,14 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError, type ReportDetail } from "@/lib/api";
 
+const STATUS_LABEL: Record<string, string> = {
+  new: "Received",
+  acknowledged: "Acknowledged",
+  in_progress: "In progress",
+  resolved: "Resolved",
+  closed: "Closed",
+};
+
 export default function TrackReportPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const [report, setReport] = useState<ReportDetail | null>(null);
@@ -31,7 +39,8 @@ export default function TrackReportPage({ params }: { params: Promise<{ code: st
       {report && (
         <div className="card">
           <p>
-            <strong>Status:</strong> {report.status}
+            <strong>Status:</strong>{" "}
+            <span className={`badge badge-${report.status}`}>{STATUS_LABEL[report.status] ?? report.status}</span>
           </p>
           <p>
             <strong>Description:</strong> {report.description}
@@ -40,17 +49,21 @@ export default function TrackReportPage({ params }: { params: Promise<{ code: st
             <strong>Location:</strong> {report.location}
           </p>
           <p>
-            <strong>Category:</strong> {report.category} ({report.category_source})
+            <strong>Category:</strong> {report.category}
           </p>
           <p>
-            <strong>Severity:</strong> {report.severity} ({report.severity_source})
-          </p>
-          <p>
-            <strong>Department:</strong> {report.department}
+            <strong>Handled by:</strong> {report.department}
           </p>
           <p>
             <strong>Submitted:</strong> {new Date(report.created_at).toLocaleString()}
           </p>
+
+          {report.duplicate_of && (
+            <p style={{ opacity: 0.8 }}>
+              This looks like the same issue as an existing report already being tracked -- we&rsquo;ve
+              linked it so it counts toward that issue&rsquo;s priority.
+            </p>
+          )}
 
           <h3 style={{ marginTop: "1.5rem" }}>Timeline</h3>
           <ul>
