@@ -6,6 +6,12 @@ AI-powered campus problem intelligence platform.
 
 Built for Campusathon 2026 (Team Gradient Descenters, PS5 — Campus Problem Intelligence).
 
+<p align="center">
+  <img src="docs/screenshots/home.png" width="32%" alt="Landing page with live AI classification demo" />
+  <img src="docs/screenshots/dashboard.png" width="32%" alt="Intelligence dashboard with KPIs, trends, and hotspots" />
+  <img src="docs/screenshots/detail.png" width="32%" alt="Report detail with explainable priority breakdown" />
+</p>
+
 ## What it does
 
 A student reports a campus problem (description, location, optional category/severity/photo).
