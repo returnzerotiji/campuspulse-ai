@@ -16,8 +16,9 @@ from app.db.session import Base, SessionLocal, engine
 
 
 def create_extensions() -> None:
-    with engine.begin() as conn:
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    if engine.dialect.name == "postgresql":
+        with engine.begin() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
 
 def create_tables() -> None:

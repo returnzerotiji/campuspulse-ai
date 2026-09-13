@@ -9,8 +9,7 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, Text, func
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import JSON, UUID, Boolean, DateTime, Float, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.ai.embeddings import EMBEDDING_DIM
@@ -57,7 +56,7 @@ class Report(Base):
     priority_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     # {severity_base, cluster_bonus, category_weight, persistence_bonus, total} --
     # lets the UI show *why* a report has this priority, not just the number.
-    priority_breakdown: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    priority_breakdown: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     department: Mapped[str] = mapped_column(String(100), nullable=False, default="Unassigned")
     department_overridden: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
@@ -65,7 +64,7 @@ class Report(Base):
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     ai_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    ai_raw_response: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    ai_raw_response: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     # Semantic grouping (see app/ai/similarity.py).
     embedding: Mapped[list[float] | None] = mapped_column(Vector(EMBEDDING_DIM), nullable=True)

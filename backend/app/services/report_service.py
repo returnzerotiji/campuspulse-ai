@@ -273,11 +273,23 @@ def get_stats_overview(db: Session) -> dict:
     open_count = sum(v for k, v in by_status.items() if k not in ("resolved", "closed"))
     resolved_count = by_status.get("resolved", 0) + by_status.get("closed", 0)
 
-    avg_resolution_hours = db.scalar(
-        select(func.avg(func.extract("epoch", Report.resolved_at - Report.created_at) / 3600.0)).where(
-            Report.resolved_at.is_not(None)
+    if db.bind and db.bind.dialect.name == "postgresql":
+        avg_resolution_hours = db.scalar(
+            select(func.avg(func.extract("epoch", Report.resolved_at - Report.created_at) / 3600.0)).where(
+                Report.resolved_at.is_not(None)
+            )
         )
-    )
+    else:
+        resolved_reports = list(db.scalars(select(Report).where(Report.resolved_at.is_not(None))).all())
+        if resolved_reports:
+            total_seconds = sum(
+                (r.resolved_at - r.created_at).total_seconds()
+                for r in resolved_reports
+                if r.resolved_at and r.created_at
+            )
+            avg_resolution_hours = (total_seconds / len(resolved_reports)) / 3600.0
+        else:
+            avg_resolution_hours = None
 
     systemic_clusters = db.scalar(
         select(func.count())
@@ -313,12 +325,23 @@ def get_stats_overview(db: Session) -> dict:
 def get_trends(db: Session, days: int = 14) -> list[dict]:
     """Reports-per-day for the last `days` days (oldest first)."""
     since = datetime.now(timezone.utc) - timedelta(days=days)
-    day_expr = func.date_trunc("day", Report.created_at)
-    stmt = (
-        select(day_expr.label("day"), func.count(Report.id))
-        .where(Report.created_at >= since)
-        .group_by(day_expr)
-        .order_by(day_expr)
-    )
-    rows = db.execute(stmt).all()
-    return [{"date": day.date().isoformat(), "count": count} for day, count in rows]
+    if db.bind and db.bind.dialect.name == "postgresql":
+        day_expr = func.date_trunc("day", Report.created_at)
+        stmt = (
+            select(day_expr.label("day"), func.count(Report.id))
+            .where(Report.created_at >= since)
+            .group_by(day_expr)
+            .order_by(day_expr)
+        )
+        rows = db.execute(stmt).all()
+        return [{"date": day.date().isoformat(), "count": count} for day, count in rows]
+    else:
+        day_expr = func.date(Report.created_at)
+        stmt = (
+            select(day_expr.label("day"), func.count(Report.id))
+            .where(Report.created_at >= since)
+            .group_by(day_expr)
+            .order_by(day_expr)
+        )
+        rows = db.execute(stmt).all()
+        return [{"date": str(day), "count": count} for day, count in rows]

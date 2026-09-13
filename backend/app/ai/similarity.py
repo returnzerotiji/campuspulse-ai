@@ -36,15 +36,50 @@ def find_similar(
     db: Session, embedding: list[float], *, exclude_id: uuid.UUID | None = None, limit: int = DEFAULT_TOP_K
 ) -> list[tuple[Report, float]]:
     """Top-k most similar reports (by cosine similarity, highest first)."""
-    distance = Report.embedding.cosine_distance(embedding)
-    stmt = select(Report, distance.label("distance")).where(Report.embedding.is_not(None))
-    if exclude_id is not None:
-        stmt = stmt.where(Report.id != exclude_id)
-    stmt = stmt.order_by(distance).limit(limit)
+    if db.bind and db.bind.dialect.name == "postgresql":
+        distance = Report.embedding.cosine_distance(embedding)
+        stmt = select(Report, distance.label("distance")).where(Report.embedding.is_not(None))
+        if exclude_id is not None:
+            stmt = stmt.where(Report.id != exclude_id)
+        stmt = stmt.order_by(distance).limit(limit)
 
-    results = db.execute(stmt).all()
-    # pgvector cosine_distance = 1 - cosine_similarity
-    return [(report, 1.0 - float(dist)) for report, dist in results]
+        results = db.execute(stmt).all()
+        # pgvector cosine_distance = 1 - cosine_similarity
+        return [(report, 1.0 - float(dist)) for report, dist in results]
+    else:
+        # Fallback for non-Postgres (SQLite): calculate cosine similarity in Python
+        stmt = select(Report).where(Report.embedding.is_not(None))
+        if exclude_id is not None:
+            stmt = stmt.where(Report.id != exclude_id)
+        reports = list(db.scalars(stmt).all())
+        if not reports:
+            return []
+
+        import json
+        import math
+
+        v1 = embedding
+        norm1 = math.sqrt(sum(x * x for x in v1))
+        if norm1 == 0:
+            return []
+
+        scored = []
+        for r in reports:
+            if r.embedding is None:
+                continue
+            v2 = r.embedding
+            if isinstance(v2, str):
+                v2 = json.loads(v2)
+            elif hasattr(v2, "tolist"):
+                v2 = v2.tolist()
+            norm2 = math.sqrt(sum(x * x for x in v2))
+            if norm2 > 0:
+                dot = sum(a * b for a, b in zip(v1, v2))
+                sim = dot / (norm1 * norm2)
+                scored.append((r, sim))
+
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return scored[:limit]
 
 
 def assign_cluster(
