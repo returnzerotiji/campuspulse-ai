@@ -53,9 +53,6 @@ export default function LoginForm() {
         </button>
       </form>
       {error && <p className="status-bad" style={{ marginTop: "1rem" }}>{error}</p>}
-      <p style={{ marginTop: "1.25rem", opacity: 0.65, fontSize: "0.78rem" }}>
-        Seed credentials: admin@campuspulse.local / changeme123
-      </p>
     </div>
   );
 }
