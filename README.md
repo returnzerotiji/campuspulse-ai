@@ -44,7 +44,7 @@ CampusPulse then:
 | Backend   | FastAPI + SQLAlchemy                                            |
 | Database  | PostgreSQL + `pgvector`                                         |
 | AI        | Claude (classification, via Anthropic API) + local embeddings (`fastembed`, offline, no key) |
-| Auth      | JWT (one admin role; students use tracking codes, no accounts) |
+| Auth      | JWT (one admin role; students use tracking codes, no accounts)  |
 
 ## Project structure
 
@@ -59,7 +59,7 @@ CampusPulse/
 │   │   │   ├── classify.py    # Claude classification, with keyword-fallback on any failure
 │   │   │   ├── embeddings.py  # local offline embeddings (fastembed)
 │   │   │   ├── similarity.py  # pgvector similarity search + duplicate/cluster assignment
-│   │   │   ├── priority.py    # rule-based dynamic priority scoring
+│   │   │   ├── priority.py   # rule-based dynamic priority scoring
 │   │   │   └── pipeline.py    # orchestrates classify -> embed -> cluster
 │   │   ├── db/                # SQLAlchemy models, session, dev init/seed
 │   │   ├── routers/           # health, auth, reports, departments, stats
@@ -162,6 +162,76 @@ though they share almost no keywords, and the cluster's priority climbs with eac
 | GET    | `/stats/overview`        | admin | Totals, resolution time, backlog, breakdowns             |
 | GET    | `/stats/hotspots`        | admin | Systemic issues: clusters with 2+ reports, ranked by priority |
 | GET    | `/stats/trends`          | admin | Reports-per-day for the last N days                      |
+
+## Admin authentication: components and request flow
+
+CampusPulse has one authenticated role: **admin**. Students do not create accounts; the tracking
+code is the lookup credential for the public report-tracking endpoint.
+
+### Components
+
+- **Login UI — `frontend/components/LoginForm.tsx`:** collects the admin email and password and
+  invokes the shared auth context.
+- **Session state — `frontend/lib/AdminAuthContext.tsx`:** shares the current admin record across
+  admin pages, stores the received token, calls `/auth/me` to restore a session, and clears the
+  local session on logout or when session restoration fails.
+- **API client — `frontend/lib/api.ts`:** calls `/auth/login` and `/auth/me`; for requests made
+  while a token is present, adds `Authorization: Bearer <token>`.
+- **Login route — `backend/app/routers/auth.py`:** finds the admin by email, verifies the submitted
+  password against its stored hash, and issues the access token.
+- **Security helpers — `backend/app/core/security.py`:** bcrypt password hashing/verification and
+  JWT creation/decoding.
+- **Authorization dependency — `backend/app/core/deps.py`:** extracts and validates the bearer
+  token, then reloads the admin from the database. Protected report and stats routes depend on it.
+- **Configuration and seed — `backend/app/config.py` and `backend/app/db/init_db.py`:** define
+  JWT settings and create the initial admin using a hashed password.
+
+### Login and authenticated request sequence
+
+1. The browser sends `POST /auth/login` with JSON `{"email":"…","password":"…"}`.
+2. The API queries the `Admin` table by email. If there is no matching admin or bcrypt password
+   verification fails, it returns `401 Unauthorized`; it does not issue a token.
+3. On success, the API signs a JWT containing `sub` (the admin email) and `exp` (expiry), using
+   the configured signing secret and algorithm. The response is `{"access_token":"…","token_type":"bearer"}`.
+4. The frontend stores the token in browser `localStorage` under `campuspulse_admin_token`, then
+   requests `GET /auth/me` to retrieve the admin profile and populate shared auth state.
+5. For later API calls, the frontend attaches `Authorization: Bearer <token>`. FastAPI decodes and
+   verifies the JWT signature/expiry, reads `sub`, and queries the database for that admin. Missing,
+   invalid, expired, or no-longer-associated tokens are rejected with `401`.
+6. On page reload, the auth provider checks for a stored token and revalidates it through
+   `/auth/me`. Logging out removes the token from local storage and clears in-memory admin state.
+
+### Credentials and tokens
+
+- **Admin password:** the database stores a bcrypt hash, not the plaintext password. The initial
+  admin is seeded from `ADMIN_EMAIL` and `ADMIN_PASSWORD`; the seed runs only if that email is
+  not already present, so changing the environment variable does not automatically reset an
+  existing account's password.
+- **JWT claims:** the token contains the admin email as `sub` and an `exp` claim. The default
+  lifetime is 12 hours (`JWT_EXPIRE_MINUTES=720`); token signing uses `JWT_SECRET` and
+  `JWT_ALGORITHM` (HS256 by default). The API looks the admin up again on each protected request.
+- **Storage:** the frontend uses `localStorage`, not an HttpOnly cookie. This is simple for a demo,
+  but JavaScript running in the page can access the token; an XSS vulnerability could expose it.
+- **Student tracking:** `POST /reports` is public and returns a tracking code such as
+  `CP-7F3K2Q`. `GET /reports/track/{code}` uses that code without a JWT. Treat the code as a
+  bearer secret: anyone who obtains it may be able to view the matching report and timeline.
+- **Seed defaults:** development defaults exist for the JWT signing secret and admin password.
+  They are not suitable for a public deployment.
+
+### Deployment security checklist
+
+Before exposing CampusPulse publicly:
+
+1. Set a long, random `JWT_SECRET` and a unique, strong `ADMIN_PASSWORD` in the backend environment;
+   do not rely on the values in `.env.example` or source-code defaults.
+2. Set production configuration explicitly, use HTTPS, and restrict CORS origins to the actual
+   frontend domain.
+3. Remove the seed-credential hint from the public login screen and avoid publishing credentials in
+   the README or other UI.
+4. Consider moving the token to a Secure, HttpOnly, SameSite cookie (with corresponding CSRF
+   protections) or otherwise carefully assess the XSS risk of local-storage bearer tokens.
+5. Add rate limiting to `/auth/login` and consider short-lived access tokens plus a refresh/revocation
+   strategy if the app grows beyond a demo.
 
 ## Design notes worth knowing
 
