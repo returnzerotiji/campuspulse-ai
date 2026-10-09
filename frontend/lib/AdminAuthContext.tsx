@@ -38,9 +38,17 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   async function login(email: string, password: string) {
     const { access_token } = await api.login(email, password);
     setToken(access_token);
-    const me = await api.me();
-    setAdmin(me);
-    return me;
+
+    try {
+      const me = await api.me();
+      setAdmin(me);
+      return me;
+    } catch (error) {
+      // Do not leave a token stored if the session cannot be initialized.
+      setToken(null);
+      setAdmin(null);
+      throw error;
+    }
   }
 
   function logout() {
